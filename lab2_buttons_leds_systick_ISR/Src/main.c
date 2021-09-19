@@ -17,6 +17,11 @@
  ******************************************************************************
  */
 #include "stm32f0xx.h"
+#define LED_TIME_BLINK_MS 500
+#define DEBOUNCE_TIME_MS 40
+#define LED_TIME_SHORT_MS 100
+#define LED_TIME_LONG_MS 1000
+static volatile uint32_t Tick;
 
 #if !defined(__SOFT_FP__) && defined(__ARM_FP)
   #warning "FPU is not initialized, but the project is compiling for an FPU. Please initialize the FPU before use."
@@ -27,9 +32,64 @@
  {
 	 if (EXTI->PR & EXTI_PR_PR0) { // check line 0 has triggered the IT
 	 EXTI->PR |= EXTI_PR_PR0; // clear the pending bit
-	 GPIOB->ODR ^= (1<<4);
+	 GPIOA->ODR ^= (1<<4); //LED1 = PA4
 	 }
  }
+
+ void SysTick_Handler(void)
+ {
+	 Tick++;
+ }
+
+ void blink_led_task(void) {
+	 static uint32_t delay;
+	 if(Tick>delay + LED_TIME_BLINK_MS){
+		 GPIOA->ODR ^= (1<<4); //LED2 = PB0 -> I don't have Hardware yet, maybe LED is connected to the another port/PIN
+	 }
+ }
+
+ void button_S2_task(void) {
+	 static uint32_t time_of_start_debouncing;//stores Tick value from previous call
+	 static uint32_t off_time;
+
+	 if(Tick > time_of_start_debouncing + DEBOUNCE_TIME_MS){ //do this every DEBOUNCE_TIME_MS miliseconds
+		 static uint32_t pre_button_state;
+		 uint32_t new_button_state = GPIOC->IDR & (1<<0);// BUTTON S2 PC0
+
+			 if((pre_button_state == 0) && (new_button_state == 1)){ //falling edge detection
+				 off_time = Tick + LED_TIME_SHORT_MS; //How long will LED stay ON
+				 GPIOB->BSRR = (1<<0);//SET LED ON
+			 	 }
+		 pre_button_state = new_button_state;
+		 time_of_start_debouncing = Tick; //stores Tick value from previous call
+	 }
+
+	 if(Tick > off_time){ //after LED_TIME_SHORT_MS (100 ms)
+		 GPIOB->BRR = (1<<0);//SET LED OFF
+	 	 }
+ }
+
+ void button_S1_task(void) {
+	 static uint32_t time_of_start_debouncing;//stores Tick value from previous call
+	 static uint32_t off_time;
+
+	 if(Tick > time_of_start_debouncing + DEBOUNCE_TIME_MS){ //do this every DEBOUNCE_TIME_MS miliseconds
+		 static uint32_t pre_button_state;
+		 uint32_t new_button_state = GPIOC->IDR & (1<<1);// BUTTON S1 PC1
+
+			 if((pre_button_state == 0) && (new_button_state == 1)){ //falling edge detection
+				 off_time = Tick + LED_TIME_LONG_MS; //How long will LED stay ON
+				 GPIOB->BSRR = (1<<0);//SET LED ON
+			 	 }
+		 pre_button_state = new_button_state;
+		 time_of_start_debouncing = Tick; //stores Tick value from previous call
+	 }
+
+	 if(Tick > off_time){ //after LED_TIME_SHORT_MS (100 ms)
+		 GPIOB->BRR = (1<<0);//SET LED OFF
+	 	 }
+ }
+
 int main(void)
 {
 	 RCC->AHBENR |= RCC_AHBENR_GPIOAEN | RCC_AHBENR_GPIOAEN| RCC_AHBENR_GPIOBEN; // enable
@@ -39,7 +99,8 @@ int main(void)
 	 GPIOC->PUPDR |= GPIO_PUPDR_PUPDR1_0; // S1 = PC1, pullup
 
 	 //ENABLE CLOCK
-	 RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
+	 RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN; //system clock is 8MHz
+	 SysTick_Config(8000); // 8MHz/8000 = 1000Hz -> 1ms
 
 	 //Interrupt
 	 SYSCFG->EXTICR[0] |= SYSCFG_EXTICR1_EXTI0_PC; // select PC0 for EXTI0
@@ -50,5 +111,8 @@ int main(void)
 
 while(1)
 	{
+	blink_led_task();
+	button_S1_task();
+	button_S2_task();
 	}
 }
