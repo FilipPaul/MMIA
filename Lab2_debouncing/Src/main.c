@@ -26,6 +26,7 @@
 #define BUTTON_DEBOUNCE_TIME 40
 #define LED_TIME_BLINK_SHORT 100
 #define LED_TIME_BLINK_LONG 1000
+#define BUTTON_DEBOUNCE_SHORT_TIME 5
 
 void EXTI0_1_IRQHandler(void)
 {
@@ -39,15 +40,17 @@ void EXTI0_1_IRQHandler(void)
 //i know these variables should be local in functions, but i need them to reset with Tick together,
 //with this approach, i think this code improves readability..
 static volatile uint32_t delay = 0;
+static volatile uint32_t delay_debounce_shift = 0;
 static volatile uint32_t delay_debounce_button = 0;
 static volatile uint32_t delay_debounce_button_long = 0;
 static volatile uint32_t Tick = 0;
 static volatile uint32_t off_time;
-static volatile uint32_t  off_time_long;
+static volatile uint32_t off_time_long;
 
-void SysTick_Handler(void){
+void SysTick_Handler(void)
+{
 	Tick++;
-	if (Tick == 0x0fffffff)//reset Tick an to prevent freezing also  reset delay variable
+	if (Tick == 0x0fffffff) //reset Tick an to prevent freezing also  reset delay variable
 	{
 		Tick = 0;
 		delay = 0;
@@ -56,36 +59,35 @@ void SysTick_Handler(void){
 		off_time = LED_TIME_BLINK_SHORT;
 		off_time_long = LED_TIME_BLINK_LONG;
 	}
-	
 }
 
-void blink(void){ //function blikac() from
+void blink(void)
+{ //function blikac()
 
 	if (Tick > delay + LED_TIME_BLINK)
 	{
-		GPIOA->ODR ^= (1<<4); //toggle YELLOW LED
+		GPIOA->ODR ^= (1 << 4); //toggle YELLOW LED
 		delay = Tick;
-
-		
 	}
-	
 }
 
-void debounce(void){ //function blikac() from
+void debounce(void)
+{
 
 	if (Tick > delay_debounce_button + BUTTON_DEBOUNCE_TIME)
 	{
 		static uint32_t in_progres_flag = 0;
 		static uint32_t pre_state;
-		uint32_t new_state = GPIOC->IDR & (1<<0); //read button PC0
-		if ((pre_state == 1)&& (new_state ==0)){ //falling edge
+		uint32_t new_state = GPIOC->IDR & (1 << 0); //read button PC0
+		if ((pre_state == 1) && (new_state == 0))
+		{ //falling edge
 			off_time = Tick + LED_TIME_BLINK_SHORT;
-			GPIOB->BSRR = ( 1<< 0); //set BLUE LED ON
+			GPIOB->BSRR = (1 << 0); //set BLUE LED ON
 			in_progres_flag = 1;
 		}
-		if((Tick > off_time) && (in_progres_flag == 1))//flag prevents to turn LED of from another function
+		if ((Tick > off_time) && (in_progres_flag == 1)) //flag prevents to turn LED of from another function
 		{
-			GPIOB->BRR = (1<<0); //TURN LED OFF
+			GPIOB->BRR = (1 << 0); //TURN LED OFF
 			in_progres_flag = 0;
 		}
 		pre_state = new_state;
@@ -93,31 +95,49 @@ void debounce(void){ //function blikac() from
 	}
 }
 
-void debounceLong(void){ //function blikac() from
+void debounceLong(void)
+{
 
 	if (Tick > delay_debounce_button_long + BUTTON_DEBOUNCE_TIME)
 	{
 		static uint32_t in_progres_flag = 0;
 		static uint32_t pre_state_long;
 		//(GPIOC->IDR & (1<<1) returns 0b00....0010 -> therefore the shift right (>> 1) to get simply 0 or 1
-		uint32_t new_state_long = ((GPIOC->IDR & (1<<1)) >> 1); //read button PC1
-		if ((pre_state_long == 1)&& (new_state_long ==0)){ //falling edge
+		uint32_t new_state_long = ((GPIOC->IDR & (1 << 1)) >> 1); //read button PC1
+		if ((pre_state_long == 1) && (new_state_long == 0))
+		{ //falling edge
 			off_time_long = Tick + LED_TIME_BLINK_LONG;
-			GPIOB->BSRR = ( 1<< 0); //set BLUE LED ON
+			GPIOB->BSRR = (1 << 0); //set BLUE LED ON
 			in_progres_flag = 1;
 		}
-		if ((Tick > off_time_long) && (in_progres_flag == 1))//flag prevents to turn LED of from another function
+		if ((Tick > off_time_long) && (in_progres_flag == 1)) //flag prevents to turn LED of from another function
 		{
-			GPIOB->BRR = (1<<0); //TURN LED OFF
+			GPIOB->BRR = (1 << 0); //TURN LED OFF
 			in_progres_flag = 0;
 		}
 		pre_state_long = new_state_long;
 		delay_debounce_button_long = Tick;
-
 	}
 }
 
+void debounceShift(void)
+{
+	if (Tick > delay_debounce_shift + BUTTON_DEBOUNCE_SHORT_TIME)
+	{
+		static uint16_t shift_register = 0xffff;
+		shift_register = (shift_register << 1);
+		if (GPIOC->IDR & (1 << 1))
+		{
+			shift_register |= 0x0001; //shift first 1 into the register
+		}
+		if (shift_register == 0x8000)
+		{
+			GPIOA->ODR ^= (1 << 5); //toggle BUILT IN LED
+		}
 
+		delay_debounce_shift = Tick;
+	}
+}
 
 int main(void)
 {
@@ -126,11 +146,12 @@ int main(void)
 	GPIOB->MODER |= GPIO_MODER_MODER0_0;										 //PB0 (BLUE LED)
 	GPIOC->PUPDR |= GPIO_PUPDR_PUPDR0_0;										 //PC0, PULLUP (at the edge of the board)
 	GPIOC->PUPDR |= GPIO_PUPDR_PUPDR1_0;										 //PC1, PULLUP
+	GPIOA->MODER |= GPIO_MODER_MODER5_0;										 //BUILT IN LED
 
 	RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN; //enable system timer
 
 	SysTick_Config(8000); //8MHz -> each 8000 ticks -> every 1ms
-/*
+						  /*
 	//External interrupt settings for PC0 (button)
 	SYSCFG->EXTICR[0] |= SYSCFG_EXTICR1_EXTI0_PC; // select PC0 for EXTI0
 	EXTI->IMR |= EXTI_IMR_MR0;					  // mask
@@ -142,5 +163,6 @@ int main(void)
 		blink();
 		debounce();
 		debounceLong();
+		debounceShift();
 	}
 }
