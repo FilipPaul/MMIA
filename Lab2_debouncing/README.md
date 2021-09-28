@@ -177,4 +177,4 @@ int main(void)
 }
 ```
 
-<img src="https://github.com/FilipPaul/MMIA/blob/main/Lab2_debouncing/debouncePart2.gif" rotate="90">
+<img src="https://github.com/FilipPaul/MMIA/blob/main/Lab2_debouncing/debouncePart2.gif" style="transform:rotate(90deg);">
