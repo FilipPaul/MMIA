@@ -16,6 +16,8 @@
  *
  ******************************************************************************
  */
+#include "stm32f0xx.h"
+uint32_t morse = 0b10101001110111011100101010000000;
 
 #if !defined(__SOFT_FP__) && defined(__ARM_FP)
   #warning "FPU is not initialized, but the project is compiling for an FPU. Please initialize the FPU before use."
@@ -23,9 +25,25 @@
 
 int main(void)
 {
+	RCC->AHBENR |= RCC_AHBENR_GPIOAEN; //enable clock
+	GPIOA->MODER |= GPIO_MODER_MODER5_0; //PA5 as output mode 01
+
     while (1)
     {
-      /* code */
+      uint32_t morse = 0b10101001110111011100101010000000;
+      for (uint8_t i = 0; i < 32-5; i++) //that -5 is there for removing last zeros...
+      {
+        if(morse & 0x80000000){//his works only because everything except 0 is true..
+          GPIOA->BSRR = (1<<5); //SET PIN HIGH
+        } 
+        else{
+        	GPIOA->BRR = (1<<5);
+        }
+        for (volatile uint32_t i = 0; i < 100000; i++){} //100k cycle delay
+        morse = (uint32_t)morse << 1;
+        //GPIOA->ODR ^= (1<<5);//toggle pin PA5
+
+      }
     }
     
 }
