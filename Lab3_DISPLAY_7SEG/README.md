@@ -1,6 +1,6 @@
 <h1>Lab 3: 7-SEG display</h1>
 <h2>PART 1 and 2: Driver initialization and counting</h2>
-<p> Vzhledem k tomu, že nemám přídavnou desku tak a zapojení je poskládané z věcí, které se mi válí doma, tak jsem použil 4x shiftregister SN74HC595N místo SCT2024CSTG. Dále protože to mám zapojené trochu jinak, proto se liší lookup table pro jednotlivé digity. Z důvodu zapojení na Breadboardu je do funkce 7seg Driveru přidáno i delay_cycles(DELAY_CYCLE); ...</p><br>
+<p> Vzhledem k tomu, že nemám přídavnou desku tak je zapojení poskládané z věcí, které se mi válí doma. Použil jsem 4x shiftregister SN74HC595N místo SCT2024CSTG. Dále protože to mám zapojené trochu jinak, liší se i lookup table pro jednotlivé digity. Z důvodu zapojení na Breadboardu je do funkce 7seg Driveru přidáno i delay_cycles(DELAY_CYCLE); ...</p><br>
 
 <h3>sct.c</h3>
 
@@ -214,16 +214,125 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    /* USER CODE END WHILE */
+
 		for (uint16_t i = 0; i < 1000; i += 111)
 		{
 			sct_display_digit(i);
 			HAL_Delay(500);
+
 		}
+    /* USER CODE END WHILE */
     /* USER CODE BEGIN 3 */
   }
 
 ```
 <img src="https://github.com/FilipPaul/MMIA/blob/main/Lab3_DISPLAY_7SEG/gifs/PART_3.gif">
+
+
+<br>
+<h2>PART 4: 7SEG driver and Rotary encoder</h2>
+<p>Obdobně jako u části 3 nevkládám celý main...</p>
+<h3>main.c</h3>
+
+```c
+/* Includes ------------------------------------------------------------------*/
+#include "main.h"
+
+/* Private includes ----------------------------------------------------------*/
+/* USER CODE BEGIN Includes */
+#include "sct.h"
+/* USER CODE END Includes */
+
+/* Private typedef -----------------------------------------------------------*/
+/* USER CODE BEGIN PTD */
+
+/* USER CODE END PTD */
+
+/* Private define ------------------------------------------------------------*/
+/* USER CODE BEGIN PD */
+/* USER CODE END PD */
+
+/* Private macro -------------------------------------------------------------*/
+/* USER CODE BEGIN PM */
+
+/* USER CODE END PM */
+
+/* Private variables ---------------------------------------------------------*/
+TIM_HandleTypeDef htim1;
+
+UART_HandleTypeDef huart2;
+
+/* USER CODE BEGIN PV */
+
+/* USER CODE END PV */
+
+/* Private function prototypes -----------------------------------------------*/
+void SystemClock_Config(void);
+static void MX_GPIO_Init(void);
+static void MX_USART2_UART_Init(void);
+static void MX_TIM1_Init(void);
+/* USER CODE BEGIN PFP */
+
+/* USER CODE END PFP */
+
+/* Private user code ---------------------------------------------------------*/
+/* USER CODE BEGIN 0 */
+
+/* USER CODE END 0 */
+
+/**
+  * @brief  The application entry point.
+  * @retval int
+  */
+int main(void)
+{
+  /* USER CODE BEGIN 1 */
+
+  /* USER CODE END 1 */
+
+  /* MCU Configuration--------------------------------------------------------*/
+
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  HAL_Init();
+
+  /* USER CODE BEGIN Init */
+
+  /* USER CODE END Init */
+
+  /* Configure the system clock */
+  SystemClock_Config();
+
+  /* USER CODE BEGIN SysInit */
+
+  /* USER CODE END SysInit */
+
+  /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+  MX_USART2_UART_Init();
+  MX_TIM1_Init();
+  /* USER CODE BEGIN 2 */
+  HAL_TIM_Encoder_Start(&htim1, htim1.Channel);
+  sct_init();
+  sct_led(0b10101010111000001100010010110000);
+  HAL_Delay(1000);
+  /* USER CODE END 2 */
+
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
+  while (1)
+  {
+	  sct_display_digit(__HAL_TIM_GET_COUNTER(&htim1));
+	  HAL_Delay(50);
+    /* USER CODE END WHILE */
+
+    /* USER CODE BEGIN 3 */
+  }
+  /* USER CODE END 3 */
+}
+
+
+```
+
+<img src="https://github.com/FilipPaul/MMIA/blob/main/Lab3_DISPLAY_7SEG/gifs/PART_4.gif">
 
 
