@@ -115,7 +115,8 @@ void sct_display_digit(uint32_t digit_to_display, uint8_t led_bargraf){
 ```
 
 
-<img src="https://github.com/FilipPaul/MMIA/blob/main/Lab4_ADC/gifs/PART.gif">
+<img src="https://github.com/FilipPaul/MMIA/blob/main/Lab4_ADC/gifs/PART1.gif">
+
 
 
 
