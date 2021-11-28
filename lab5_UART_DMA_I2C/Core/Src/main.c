@@ -23,6 +23,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h> //for printf
+#include <string.h> //strtoc, strcmp
+
 
 
 /* USER CODE END Includes */
@@ -49,30 +51,82 @@ DMA_HandleTypeDef hdma_usart2_rx;
 #define RX_BUFFER_LEN 64
 #define CMD_BUFFER_LEN 64
 static uint8_t uart_rx_buffer[RX_BUFFER_LEN];
-static volatile uint16_t uart_rx_pointer_read;
+static volatile uint16_t uart_rx_pointer_read = 0;
 #define uart_rx_pointer_write (RX_BUFFER_LEN - hdma_usart2_rx.Instance->CNDTR)
-
-uint8_t flag_read = 0;
 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_USART2_UART_Init(void);
 static void MX_DMA_Init(void);
-uint8_t data[64];
+static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
 static void uart_process_command(char *cmd)
 {
-	printf("received: '%s'\n", cmd);
-	//printf is overloaded to print data into UART
+	//printf is overloaded to print data into UART2
+	//printf("received: '%s'\n", cmd);
+
+	char *command;
+	command = strtok(cmd, " "); //similarly to python's list.split, but takes only first one..
+	if (  strcasecmp(command, "HELLO") == 0   ){
+		printf("I'm ready!\n");
+	}
+
+	else if (  strcasecmp(command, "LED2") == 0   )
+	{
+		command = strtok(NULL, " "); //take last result from strtok -> 2nd word
+		printf("I'm ready!\n");
+		if (  strcasecmp(command, "ON") == 0   ){
+			HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin,GPIO_PIN_SET );
+			printf("Turning LED2 ON\n");
+		}
+		else if (  strcasecmp(command, "OFF") == 0   ){
+			HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin,GPIO_PIN_RESET );
+			printf("Turning LED2 OFF\n");
+		}
+	}
+
+	else if (  strcasecmp(command, "LED1") == 0   )
+	{
+		command = strtok(NULL, " "); //take last result from strtok -> 2nd word
+		printf("I'm ready!\n");
+		if (  strcasecmp(command, "ON") == 0   ){
+			HAL_GPIO_WritePin(LD1_GPIO_Port, LD1_Pin,GPIO_PIN_SET );
+			printf("Turning LED1 ON\n");
+		}
+		if (  strcasecmp(command, "OFF") == 0   ){
+			HAL_GPIO_WritePin(LD1_GPIO_Port, LD1_Pin,GPIO_PIN_RESET );
+			printf("Turning LED1 OFF\n");
+		}
+	}
+
+	else if (  strcasecmp(command, "STATUS") == 0   )
+	{
+		if (HAL_GPIO_ReadPin(LD1_GPIO_Port,LD1_Pin ) == 0 )
+			printf("status LED 1: OFF");
+		else {
+			printf("status LED 1: ON");
+		}
+
+		if (HAL_GPIO_ReadPin(LD2_GPIO_Port,LD2_Pin ) == 0 )
+			printf("status LED 2: OFF\n");
+		else {
+			printf("status LED 2: ON\n");
+		}
+
+	}
+
+	else{
+		printf("Unknown command\n");
+	}
+
 }
 
 int _write(int file, char const *buf, int n)
 {
 	HAL_UART_Transmit(&huart2, (uint8_t*)(buf), n, HAL_MAX_DELAY);
-	return n; //why ? its like OK flag ?
+	return n; //size
 }
 
 static void uart_byte_avaiable(uint8_t c)
@@ -128,8 +182,8 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_USART2_UART_Init();
   MX_DMA_Init();
+  MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
   HAL_UART_Receive_DMA(&huart2, uart_rx_buffer, RX_BUFFER_LEN);
   /* USER CODE END 2 */
@@ -143,29 +197,18 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
-	 flag_read = 0;
-	 while (uart_rx_pointer_read != uart_rx_pointer_write)
-	 {
-		 flag_read = 1;
-		 uint8_t bytes_from_buffer = uart_rx_buffer[uart_rx_pointer_read];
-		 uart_rx_pointer_read++;
-		 if(uart_rx_pointer_read >= RX_BUFFER_LEN){
-			 uart_rx_pointer_read = 0 ;//reset read pointer
+	while(uart_rx_pointer_read != uart_rx_pointer_write){
+		  uint8_t b = uart_rx_buffer[uart_rx_pointer_read];
+		  uart_rx_pointer_read++;
 
-		 }
+		  if (uart_rx_pointer_read >= RX_BUFFER_LEN){
+			  uart_rx_pointer_read = 0;
+		  }
+		  uart_byte_avaiable(b);
 
-		 data[uart_rx_pointer_read] = bytes_from_buffer;
-		 //uart_byte_avaiable(bytes_from_buffer);
+	  }
+/*
 
-	 }
-	 if (flag_read == 1){
-		 for (uint8_t i = 0; i < 64; i++){
-			 printf("%d\n",data[i]);
-		 }
-
-	 }
-
-	 /*
 	  //LOOPBACK
 	  uint8_t UARTchar;
 	  //take received char into UARTchar
@@ -174,7 +217,7 @@ int main(void)
 	  //Transmitt UARTchar
 	  HAL_UART_Transmit(&huart2, &UARTchar, 1, HAL_MAX_DELAY);
 
-	  */
+*/
   }
   /* USER CODE END 3 */
 }
@@ -282,6 +325,9 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOA_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(LD1_GPIO_Port, LD1_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : B1_Pin */
@@ -289,6 +335,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : LD1_Pin */
+  GPIO_InitStruct.Pin = LD1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(LD1_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : LD2_Pin */
   GPIO_InitStruct.Pin = LD2_Pin;
