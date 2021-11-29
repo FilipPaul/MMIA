@@ -209,4 +209,5 @@ int main(void)
 
 ```
 
-<img src="https://github.com/FilipPaul/MMIA/blob/main/Lab_4_ADC/gifs/PART2.gif">
+<h2>PART 2: Commands from UART</h2>
+<p>Vzhledem k tomu, že nemám po ruce žádnou EEPORM s I2C tuto část asi oželím i za cenu ztráty bodů...</p>
