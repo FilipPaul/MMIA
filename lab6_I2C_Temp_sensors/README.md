@@ -44,7 +44,7 @@ dlmwrite("ADC_data.dlm", poly_temp*10, ',')
 
 ```
 
-<img src="https://github.com/FilipPaul/MMIA/blob/main/Lab6_I2C_Temp_sensors/MATLAB/ADCplot.jpg">
+<img src="https://github.com/FilipPaul/MMIA/blob/main/lab6_I2C_Temp_sensors/MATLAB/ADCplot.jpg">
 
 <h2>PART 2: stavový automat</h2>
 <p>Vzhledem k tomu, že byly laborky dělané bez HW. Především protože to zase dělám na poslední chvíli a ve 3 hodiny ráno se mi nechce zapojovat celý driver pro 7seg displej. Tak následující část kódu nebyla nijak otestována.</p>
